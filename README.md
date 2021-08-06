@@ -1,4 +1,4 @@
-# Configuration Service
+# Remote Configuration Service
 
 [![Build](https://github.com/jamespratt/configuration-service/workflows/release/badge.svg)](https://github.com/jamespratt/configuration-service/actions?query=workflow%3Arelease)
 
