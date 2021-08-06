@@ -1,0 +1,42 @@
+name: release
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Setup .NET Core
+      uses: actions/setup-dotnet@v1
+      with:
+        dotnet-version: 5.0.100
+
+    - name: Install dependencies
+      run: dotnet restore src/ConfigurationService.sln
+      
+    - name: Build
+      run: dotnet build src/ConfigurationService.sln --configuration Release --no-restore
+
+    - name: Test
+      run: dotnet test src/ConfigurationService.sln --no-restore --logger "console;verbosity=normal"
+
+    - name: Publish ConfigurationService.Hosting
+      uses: brandedoutcast/publish-nuget@v2.5.2
+      with:
+          PROJECT_FILE_PATH: src/ConfigurationService.Hosting/ConfigurationService.Hosting.csproj
+          NUGET_KEY: ${{secrets.NUGET_API_KEY}}
+          TAG_COMMIT: false
+
+    - name: Publish ConfigurationService.Client
+      uses: brandedoutcast/publish-nuget@v2.5.2
+      with:
+          PROJECT_FILE_PATH: src/ConfigurationService.Client/ConfigurationService.Client.csproj
+          NUGET_KEY: ${{secrets.NUGET_API_KEY}}
+          TAG_COMMIT: false
