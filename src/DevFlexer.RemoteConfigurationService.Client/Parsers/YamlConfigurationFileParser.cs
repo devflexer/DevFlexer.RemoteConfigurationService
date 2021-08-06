@@ -43,11 +43,11 @@ namespace DevFlexer.RemoteConfigurationService.Client.Parsers
             {
                 VisitYamlScalarNode(context, scalarNode);
             }
-            if (node is YamlMappingNode mappingNode)
+            else if (node is YamlMappingNode mappingNode)
             {
                 VisitYamlMappingNode(context, mappingNode);
             }
-            if (node is YamlSequenceNode sequenceNode)
+            else if (node is YamlSequenceNode sequenceNode)
             {
                 VisitYamlSequenceNode(context, sequenceNode);
             }

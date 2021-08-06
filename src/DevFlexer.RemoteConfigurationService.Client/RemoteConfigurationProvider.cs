@@ -39,44 +39,32 @@ namespace DevFlexer.RemoteConfigurationService.Client
                 throw new ArgumentNullException(nameof(source.ConfigurationServiceUri));
             }
 
+            // Setup logging.
             Logger.LoggerFactory = source.LoggerFactory ?? new NullLoggerFactory();
 
             _logger = Logger.CreateLogger<RemoteConfigurationProvider>();
 
-            _logger.LogInformation("Initializing remote configuration source for configuration '{ConfigurationName}'.", source.ConfigurationName);
+            _logger.LogInformation($"Initializing remote configuration source for configuration 'source.ConfigurationName'.");
 
+            // Create http client.
             _httpClient = new Lazy<HttpClient>(CreateHttpClient);
 
+            // Create configuration file parser.
             _parser = source.Parser;
-
             if (_parser == null)
             {
                 var extension = Path.GetExtension(source.ConfigurationName).ToLower();
 
-                _logger.LogInformation("A file parser was not specified. Attempting to resolve parser from file extension '{extension}'.", extension);
+                _logger.LogInformation($"A file parser was not specified. Attempting to resolve parser from file extension '{extension}'.");
 
-                switch (extension)
-                {
-                    case ".ini":
-                        _parser = new IniConfigurationFileParser();
-                        break;
-                    case ".xml":
-                        _parser = new XmlConfigurationFileParser();
-                        break;
-                    case ".yml": // right?
-                    case ".yaml":
-                        _parser = new YamlConfigurationFileParser();
-                        break;
-                    default:
-                        _parser = new JsonConfigurationFileParser();
-                        break;
-                }
+                _parser = CreateFileParserByExtension(extension);
             }
 
-            _logger.LogInformation("Using parser {Name}.", _parser.GetType().Name);
+            _logger.LogInformation($"Using parser {_parser.GetType().Name}.");
 
             if (source.ReloadOnChange)
             {
+                // ReloadOnChange를 지정했지만, Subscriber가 지정되지 않았으므로 원격지의 변경사항을 감지할 수 없음을 경고로 알려줌.
                 if (source.CreateSubscriber == null)
                 {
                     _logger.LogWarning("ReloadOnChange is enabled but a subscriber has not been configured.");
@@ -85,19 +73,19 @@ namespace DevFlexer.RemoteConfigurationService.Client
 
                 var subscriber = source.CreateSubscriber();
 
-                _logger.LogInformation("Initializing remote configuration {Name} subscriber for configuration '{ConfigurationName}'.", subscriber.Name, source.ConfigurationName);
+                _logger.LogInformation($"Initializing remote configuration {subscriber.Name} subscriber for configuration '{source.ConfigurationName}'.");
 
                 subscriber.Initialize();
 
                 subscriber.Subscribe(source.ConfigurationName, message =>
                 {
-                    _logger.LogInformation("Received remote configuration change subscription for configuration '{ConfigurationName}' with hash {message}. " +
-                                           "Current hash is {Hash}.", source.ConfigurationName, message, Hash);
+                    _logger.LogInformation($"Received remote configuration change subscription for configuration '{source.ConfigurationName}' with hash {message}. " +
+                                           $"Current hash is {Hash}.");
 
                     if (message != null && message.Equals(Hash, StringComparison.OrdinalIgnoreCase))
                     {
-                        _logger.LogInformation("Configuration '{ConfigurationName}' current hash {Hash} matches new hash. " +
-                                               "Configuration will not be updated.", source.ConfigurationName, Hash);
+                        _logger.LogInformation($"Configuration '{source.ConfigurationName}' current hash {Hash} matches new hash. " +
+                                               $"Configuration will not be updated.");
 
                         return;
                     }
@@ -106,6 +94,29 @@ namespace DevFlexer.RemoteConfigurationService.Client
                     OnReload();
                 });
             }
+        }
+
+        private static IConfigurationFileParser CreateFileParserByExtension(string extension)
+        {
+            IConfigurationFileParser parser;
+            switch (extension)
+            {
+                case ".ini":
+                    parser = new IniConfigurationFileParser();
+                    break;
+                case ".xml":
+                    parser = new XmlConfigurationFileParser();
+                    break;
+                case ".yml":
+                case ".yaml":
+                    parser = new YamlConfigurationFileParser();
+                    break;
+                default:
+                    parser = new JsonConfigurationFileParser();
+                    break;
+            }
+
+            return parser;
         }
 
         public override void Load() => LoadAsync().ContinueWith(task =>
@@ -157,38 +168,43 @@ namespace DevFlexer.RemoteConfigurationService.Client
         {
             var encodedConfigurationName = WebUtility.UrlEncode(_source.ConfigurationName);
 
-            _logger.LogInformation("Requesting remote configuration {ConfigurationName} from {BaseAddress}.", _source.ConfigurationName, HttpClient.BaseAddress);
+            _logger.LogInformation($"Requesting remote configuration '{_source.ConfigurationName}' from '{HttpClient.BaseAddress}'...");
 
             try
             {
-                using (var response = await HttpClient.GetAsync(encodedConfigurationName).ConfigureAwait(false))
+                using var response = await HttpClient.GetAsync(encodedConfigurationName).ConfigureAwait(false);
+
+                if (response.StatusCode != HttpStatusCode.OK)
                 {
-                    _logger.LogInformation("Received response status code {StatusCode} from endpoint for configuration '{ConfigurationName}'.",
-                        response.StatusCode, _source.ConfigurationName);
+                    string statusMessage = $"Received response status code {(int)response.StatusCode}({response.StatusCode}) from endpoint for configuration '{_source.ConfigurationName}'.";
+                    _logger.LogWarning(statusMessage);
+                }
+                else
+                {
+                    string statusMessage = $"Received from endpoint for configuration '{_source.ConfigurationName}'.";
+                    _logger.LogInformation(statusMessage);
+                }
 
-                    if (response.IsSuccessStatusCode)
-                    {
-                        using (var stream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false))
-                        {
-                            _logger.LogInformation("Parsing remote configuration response stream ({Length:N0} bytes) for configuration '{ConfigurationName}'.",
-                                stream.Length, _source.ConfigurationName);
+                if (response.IsSuccessStatusCode)
+                {
+                    using var stream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
 
-                            Hash = ComputeHash(stream);
-                            _logger.LogInformation("Computed hash for Configuration '{ConfigurationName}' is {Hash}.", _source.ConfigurationName, Hash);
+                    _logger.LogInformation($"Parsing remote configuration response stream ({stream.Length:N0} bytes) for configuration '{_source.ConfigurationName}'.");
 
-                            stream.Position = 0;
-                            var data = _parser.Parse(stream);
+                    Hash = ComputeHash(stream);
+                    _logger.LogInformation($"Computed hash for Configuration '{_source.ConfigurationName}' is {Hash}.");
 
-                            _logger.LogInformation("Configuration updated for '{ConfigurationName}'.", _source.ConfigurationName);
+                    stream.Position = 0;
+                    var data = _parser.Parse(stream);
 
-                            return data;
-                        }
-                    }
+                    _logger.LogInformation($"Configuration updated for '{_source.ConfigurationName}'.");
 
-                    if (!_source.Optional)
-                    {
-                        throw new Exception($"Error calling remote configuration endpoint: {response.StatusCode} - {response.ReasonPhrase}");
-                    }
+                    return data;
+                }
+
+                if (!_source.Optional)
+                {
+                    throw new Exception($"Error calling remote configuration endpoint: {response.StatusCode} - {response.ReasonPhrase}");
                 }
             }
             catch (Exception)

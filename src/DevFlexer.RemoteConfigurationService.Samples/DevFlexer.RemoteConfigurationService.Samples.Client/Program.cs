@@ -26,6 +26,8 @@ namespace DevFlexer.RemoteConfigurationService.Samples.Client
                 {
                     o.ServiceUri = "http://localhost:5000/remote-configuration/";
 
+                    // test.json
+                    // environment에 준해서 처리할 수 있지 않을까 싶은데..?
                     o.AddConfiguration(c =>
                     {
                         c.ConfigurationName = "test.json";
@@ -33,12 +35,13 @@ namespace DevFlexer.RemoteConfigurationService.Samples.Client
                         c.Optional = false;
                     });
 
+                    // test.yaml
+                    // environment에 준해서 처리할 수 있지 않을까 싶은데..?
                     o.AddConfiguration(c =>
                     {
                         c.ConfigurationName = "test.yaml";
                         c.ReloadOnChange = true;
-                        c.Optional = false;
-                        //c.Parser = new YamlConfigurationFileParser();
+                        c.Optional = true;
                     });
 
                     o.AddRedisSubscriber("localhost:6379");

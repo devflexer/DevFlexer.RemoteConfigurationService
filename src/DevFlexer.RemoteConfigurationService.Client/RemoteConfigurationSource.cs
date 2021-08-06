@@ -16,7 +16,7 @@ namespace DevFlexer.RemoteConfigurationService.Client
         public string ConfigurationServiceUri { get; set; }
 
         /// <summary>
-        /// Name or path of the configuration file relative to the configuration Storage path.
+        /// Name or path of the configuration file relative to the configuration storage path.
         /// </summary>
         public string ConfigurationName { get; set; }
 

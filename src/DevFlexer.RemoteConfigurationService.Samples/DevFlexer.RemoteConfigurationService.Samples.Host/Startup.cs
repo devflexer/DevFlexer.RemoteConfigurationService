@@ -20,10 +20,11 @@ namespace ConfigurationService.Samples.Host
         {
             services.AddControllers();
 
+            //기본 appsettings에서 값을 가져와서 처리할 수 있으면 좋을듯한데..
+
             services.AddRemoteConfigurationService()
                 .AddGitStorage(c =>
                 {
-                    //todo 이걸 configuration에서 가져오게 하려면 어떻게 해야할까?
                     c.RepositoryUrl = "https://github.com/devflexer/remote-configuration-storage-test.git";
                     c.LocalPath = "C:/LocalRepository";
                     c.Branch = "main";
@@ -49,7 +50,10 @@ namespace ConfigurationService.Samples.Host
             {
                 endpoints.MapControllers();
 
-                //두개의 endpoint를 연결해야함.
+                // github action등을 이용해서 지정한 엔트포인트를 호출하면 감지하게할수도 있지 않을까?
+                // 헌데 이건 서버에서만 감지되는거지 클라에는 감지안됨임.
+                // 즉, github 폴링만 억제할수 있다는 얘기임.
+
                 endpoints.MapRemoteConfigurationService();
             });
         }
