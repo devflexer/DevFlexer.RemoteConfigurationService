@@ -5,46 +5,46 @@
 
 |  Package  |Latest Release|
 |:----------|:------------:|
-|**ConfigurationService.Hosting**|[![NuGet Badge ConfigurationService.Hosting](https://buildstats.info/nuget/ConfigurationService.Hosting)](https://www.nuget.org/packages/ConfigurationService.Hosting)
-|**ConfigurationService.Client**|[![NuGet Badge ConfigurationService.Client](https://buildstats.info/nuget/ConfigurationService.Client)](https://www.nuget.org/packages/ConfigurationService.Client)
+|**DevFlexer.RemoteConfigurationService.Hosting**|[![NuGet Badge DevFlexer.RemoteConfigurationService.Hosting](https://buildstats.info/nuget/DevFlexer.RemoteConfigurationService.Hosting)](https://www.nuget.org/packages/DevFlexer.RemoteConfigurationService.Hosting)
+|**DevFlexer.RemoteConfigurationService.Client**|[![NuGet Badge DevFlexer.RemoteConfigurationService.Client](https://buildstats.info/nuget/DevFlexer.RemoteConfigurationService.Client)](https://www.nuget.org/packages/DevFlexer.RemoteConfigurationService.Client)
 
 <!-- [![Join the chat at https://gitter.im/configuration-service/community](https://badges.gitter.im/configuration-service/community.svg)](https://gitter.im/configuration-service/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge) -->
 
-## About Configuration Service
+## About Remote Configuration Service
 
-Configuration Service is a distributed configuration service for .NET Core.  Configuration for fleets of applications, services, and containerized micro-services can be updated immediately without the need to redeploy or restart. Configuration Service uses a client/server pub/sub architecture to notify subscribed clients of configuration changes as they happen.  Configuration can be injected using the standard options pattern with `IOptions`, `IOptionsMonitor` or `IOptionsSnapshot`.
+Remote Configuration Service is a distributed configuration service for .NET Core.  Configuration for fleets of applications, services, and containerized micro-services can be updated immediately without the need to redeploy or restart. Remote Configuration Service uses a client/server pub/sub architecture to notify subscribed clients of configuration changes as they happen.  Configuration can be injected using the standard options pattern with `IOptions`, `IOptionsMonitor` or `IOptionsSnapshot`.
 
-Configuration Service currently supports hosting configuration with git, file system or Vault backends and supports publishing changes with Redis, NATS or RabbitMQ publish/subscribe.  File types supported are .json, .yaml, .xml and .ini.
+Remote Configuration Service currently supports hosting configuration with git, file system backends and supports publishing changes with Redis or RabbitMQ publish/subscribe.  File types supported are .json, .yaml, .xml and .ini.
 
-[![Configuration Service Diagram](https://github.com/jamespratt/configuration-service/blob/master/images/configuration-service.gif)](#about-configuration-service)
+[![Remote Configuration Service Diagram](https://github.com/jamespratt/configuration-service/blob/master/images/configuration-service.gif)](#about-remote-configuration-service)
 
 ## Features
 * RESTful HTTP based API for external configuration.
 * Server easily integrates into an ASP.NET Core application.
 * Client easily integrates into any .NET Standard 2.0 application using the standard `ConfigurationBuilder` pattern.
 * Client encapsulates real-time configuration updates.
-* Support for git, file system and Vault backend storage.
-* Support for pub/sub with Redis, NATS and RabbitMQ.
+* Support for git, file system backend storages.
+* Support for pub/sub with Redis and RabbitMQ.
 * Support for .json, .yaml, .xml and .ini configuration files.
 * Inject configuration with `IOptionsMonitor` or `IOptionsSnapshot` to access configuration changes.
 
 ## Installing with NuGet
 
-The easiest way to install Configuration Service is with [NuGet](https://www.nuget.org/packages/ConfigurationService.Hosting/).
+The easiest way to install Remote Configuration Service is with [NuGet](https://www.nuget.org/packages/DevFlexer.RemoteConfigurationService.Hosting/).
 
 In Visual Studio's [Package Manager Console](http://docs.nuget.org/docs/start-here/using-the-package-manager-console),
 enter the following command:
 
 Server:
 
-    Install-Package ConfigurationService.Hosting
+    Install-Package DevFlexer.RemoteConfigurationService.Hosting
     
 Client:
 
-    Install-Package ConfigurationService.Client
+    Install-Package DevFlexer.RemoteConfigurationService.Client
     
-## Adding the Configuration Service Host
-The Configuration Service host middleware can be added to the service collection of an existing ASP.NET Core application.  The following example configures a git storage provider with a Redis publisher.
+## Adding the Remote Configuration Service Host
+The Remote Configuration Service host middleware can be added to the service collection of an existing ASP.NET Core application.  The following example configures a git storage provider with a Redis publisher.
 
 ```csharp
 public void ConfigureServices(IServiceCollection services)
@@ -54,14 +54,14 @@ public void ConfigureServices(IServiceCollection services)
     services.AddRemoteConfigurationService()
         .AddGitStorage(c =>
         {
-            c.RepositoryUrl = "https://github.com/jamespratt/configuration-test.git";
-            c.LocalPath = "C:/local-repo";
+            c.RepositoryUrl = "https://github.com/devflexer/remote-configuration-storage-test.git";
+            c.LocalPath = @"C:\LocalRepository";
         })
         .AddRedisPublisher("localhost:6379");
 }
 ```
 
-In Startup.Configure, call `MapConfigurationService` on the endpoint builder. The default pattern is "/configuration".
+In Startup.Configure, call `MapRemoteConfigurationService` on the endpoint builder. The default pattern is "/remote-configuration".
 
 ```csharp
 app.UseEndpoints(endpoints =>
@@ -121,8 +121,8 @@ services.AddRemoteConfigurationService()
     ...
 ```
 
-#### Custom Storage Providers and Publishers
-Custom implementations of storage providers and publishers can be added by implementing the `IProvider` and `IPublisher` interfaces and calling the appropriate extension methods on AddConfigurationService:
+#### Custom Storage and Publishers
+Custom implementations of storage providers and publishers can be added by implementing the `IConfigurationStorage` and `IPublisher` interfaces and calling the appropriate extension methods on AddRemoteConfigurationService:
 
 ```csharp
 services.AddRemoteConfigurationService()
@@ -130,8 +130,8 @@ services.AddRemoteConfigurationService()
     .AddPublisher(new CustomPublisher());
 ```
 
-## Adding the Configuration Service Client
-The Configuration Service client can be configured by adding `AddRemoteConfiguration` to the standard configuration builder. In the following example, remote json configuration is added and a Redis endpoint is specified for configuration change subscription.  Local configuration can be read for settings for the remote source by using multiple instances of  configuration builder. 
+## Adding the Remote Configuration Service Client
+The Remote Configuration Service client can be configured by adding `AddRemoteConfiguration` to the standard configuration builder. In the following example, remote json configuration is added and a Redis endpoint is specified for configuration change subscription.  Local configuration can be read for settings for the remote source by using multiple instances of  configuration builder. 
 
 ```csharp
 var loggerFactory = LoggerFactory.Create(builder =>
@@ -147,13 +147,15 @@ configuration = new ConfigurationBuilder()
     .AddConfiguration(configuration)
     .AddRemoteConfiguration(o =>
     {
-        o.ServiceUri = "http://localhost:5000/configuration/";
+        o.ServiceUri = "http://localhost:5000/remote-configuration/";
+        
         o.AddConfiguration(c =>
         {
             c.ConfigurationName = "test.json";
             c.ReloadOnChange = true;
             c.Optional = false;
         });
+
         o.AddConfiguration(c =>
         {
             c.ConfigurationName = "test.yaml";
@@ -161,7 +163,9 @@ configuration = new ConfigurationBuilder()
             c.Optional = false;
             c.Parser = new YamlConfigurationFileParser();
         });
+
         o.AddRedisSubscriber("localhost:6379");
+
         o.AddLoggerFactory(loggerFactory);
     })
     .Build();
