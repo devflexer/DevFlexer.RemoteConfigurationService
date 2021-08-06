@@ -127,7 +127,7 @@ namespace DevFlexer.RemoteConfigurationService.Client.Parsers
         }
 
         private static void ProcessAttributes(XmlReader reader, Stack<string> prefixStack, IDictionary<string, string> data,
-            Action<XmlReader, Stack<string>, IDictionary<string, string>, XmlWriter> act, XmlWriter writer = null)
+            Action<XmlReader, Stack<string>, IDictionary<string, string>, XmlWriter> action, XmlWriter writer = null)
         {
             for (int i = 0; i < reader.AttributeCount; i++)
             {
@@ -138,7 +138,7 @@ namespace DevFlexer.RemoteConfigurationService.Client.Parsers
                     throw new FormatException("Namespace is not supported.");
                 }
 
-                act(reader, prefixStack, data, writer);
+                action(reader, prefixStack, data, writer);
             }
 
             reader.MoveToElement();
