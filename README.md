@@ -51,8 +51,8 @@ public void ConfigureServices(IServiceCollection services)
 {
     services.AddControllers();
 
-    services.AddConfigurationService()
-        .AddGitProvider(c =>
+    services.AddRemoteConfigurationService()
+        .AddGitStorage(c =>
         {
             c.RepositoryUrl = "https://github.com/jamespratt/configuration-test.git";
             c.LocalPath = "C:/local-repo";
@@ -66,13 +66,13 @@ In Startup.Configure, call `MapConfigurationService` on the endpoint builder. Th
 ```csharp
 app.UseEndpoints(endpoints =>
 {
-    endpoints.MapConfigurationService();
+    endpoints.MapRemoteConfigurationService();
 });
 ```
 
 The configured host will expose two API endpoints:
-* `configuration/` - Lists all files at the configured provider.
-* `configuration/{filename}` - Retrieves the contents of the specified file.
+* `remote-configuration/` - Lists all files at the configured provider.
+* `remote-configuration/{filename}` - Retrieves the contents of the specified file.
 
 #### Git Provider Options
 |  Property  | Description |
@@ -86,13 +86,13 @@ The configured host will expose two API endpoints:
 |PollingInterval|The interval to check for remote changes. Defaults to 60 seconds.|
 
 ```csharp
-services.AddConfigurationService()
-    .AddGitProvider(c =>
+services.AddRemoteConfigurationService()
+    .AddGitStorage(c =>
     {
         c.RepositoryUrl = "https://example.com/my-repo/my-repo.git";
         c.Username = "username";
         c.Password = "password";
-        c.Branch = "master";
+        c.Branch = "main";
         c.LocalPath = "C:/config";
         c.SearchPattern = ".*json";
         c.PollingInterval = TimeSpan.FromSeconds(60);
@@ -111,8 +111,8 @@ services.AddConfigurationService()
 |Domain|Domain for authentication.|
 
 ```csharp
-services.AddConfigurationService()
-    .AddFileSystemProvider(c => 
+services.AddRemoteConfigurationService()
+    .AddFileSystemStorage(c => 
     {
         c.Path = "C:/config";
         c.SearchPattern = "*.json";
@@ -121,31 +121,12 @@ services.AddConfigurationService()
     ...
 ```
 
-#### Vault Provider Options
-|  Property  | Description |
-|:-----------|:------------|
-|ServerUri|The Vault Server Uri with port.|
-|Path|The path where the kv secrets engine is enabled.|
-|AuthMethodInfo|The auth method to be used to acquire a Vault token.|
-|PollingInterval|The interval to check for for remote changes. Defaults to 60 seconds.|
-
-```csharp
-services.AddConfigurationService()
-    .AddVaultProvider(c =>
-    {
-        c.ServerUri = "http://localhost:8200/";
-        c.Path = "secret/";
-        c.AuthMethodInfo = new TokenAuthMethodInfo("myToken");
-    })
-    ...
-```
-
 #### Custom Storage Providers and Publishers
 Custom implementations of storage providers and publishers can be added by implementing the `IProvider` and `IPublisher` interfaces and calling the appropriate extension methods on AddConfigurationService:
 
 ```csharp
-services.AddConfigurationService()
-    .AddProvider(new CustomStorageProvider())
+services.AddRemoteConfigurationService()
+    .AddStorage(new CustomStorage())
     .AddPublisher(new CustomPublisher());
 ```
 
@@ -199,7 +180,6 @@ configuration = new ConfigurationBuilder()
 |ReloadOnChange|Determines whether the source will be loaded if the underlying file changes.|
 |Parser|The type used to parse the remote configuration file. The client will attempt to resolve this from the file extension of `ConfigurationName` if not specified.<br /><br />Supported Types: <ul><li>`JsonConfigurationFileParser`</li><li>`YamlConfigurationFileParser`</li><li>`XmlConfigurationFileParser`</li><li>`IniConfigurationFileParser`</li></ul>|
 |**AddRedisSubscriber**|Adds Redis as the configuration subscriber.|
-|**AddNatsSubscriber**|Adds NATS as the configuration subscriber.|
 |**AddRabbitMqSubscriber**|Adds RabbitMQ as the configuration subscriber.|
 |**AddSubscriber**|Adds a custom configuration subscriber the implements `ISubscriber`.|
 |**AddLoggerFactory**|Adds the type used to configure the logging system and create instances of `ILogger`.|
