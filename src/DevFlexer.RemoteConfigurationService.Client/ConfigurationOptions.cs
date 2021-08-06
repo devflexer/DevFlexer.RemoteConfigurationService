@@ -8,7 +8,7 @@
         public string ConfigurationName { get; set; }
 
         /// <summary>
-        /// Determines if loading the file is optional. Defaults to false>.
+        /// Determines if loading the file is optional. Defaults to false.
         /// </summary>
         public bool Optional { get; set; }
 
